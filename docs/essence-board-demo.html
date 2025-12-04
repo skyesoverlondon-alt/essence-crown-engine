@@ -2,12 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Essence Crown – Board Demo</title>
+  <title>Essence Crown – Shard Wars Board Demo</title>
   <style>
+    :root {
+      --purple-soft: #1f1635;
+      --purple-bright: #7c3aed;
+      --gold-soft: #fbbf24;
+      --bg-deep: #030712;
+      --fg-soft: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #05040a;
-      color: #f5f3ff;
+      background: radial-gradient(circle at top, #111827, #020617 60%);
+      color: var(--fg-soft);
       margin: 0;
       padding: 0;
     }
@@ -16,15 +28,16 @@
       text-align: center;
       margin: 12px 0 4px;
       font-size: 1.4rem;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: #f5e3ff;
+      color: #fef9c3;
+      text-shadow: 0 0 12px rgba(250, 250, 210, 0.4);
     }
 
     #app {
       max-width: 1100px;
       margin: 0 auto 24px;
-      padding: 12px;
+      padding: 10px;
     }
 
     .controls {
@@ -32,147 +45,201 @@
       flex-wrap: wrap;
       gap: 8px;
       justify-content: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     button {
       border-radius: 999px;
-      border: 1px solid #a855f7;
+      border: 1px solid rgba(248, 250, 252, 0.14);
       background: radial-gradient(circle at top left, #7c3aed, #4c1d95);
-      color: #fdfcff;
+      color: #f9fafb;
       padding: 6px 14px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       cursor: pointer;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.6), 0 10px 20px rgba(15, 23, 42, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
     }
 
     button:disabled {
-      opacity: 0.4;
+      opacity: 0.45;
       cursor: default;
-      background: #1f172a;
+      background: #111827;
       border-color: #4b5563;
+      box-shadow: none;
     }
 
-    .board {
-      display: grid;
-      grid-template-rows: auto auto auto;
-      gap: 10px;
+    .turn-indicator {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
     }
 
-    .player-row {
-      border-radius: 16px;
-      padding: 8px 10px;
-      background: linear-gradient(to bottom right, #111827, #020617);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      box-shadow: 0 18px 30px rgba(15, 23, 42, 0.8);
+    /* Board + background image */
+
+    .board-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .board-image {
+      position: relative;
+      width: 100%;
+      max-width: 980px;
+      /* 24x28in ≈ 24:28 ratio */
+      aspect-ratio: 24 / 28;
+      background-image: url("EssenceCrown_2Player_Tabletop_v3_24x28in_300dpi.png");
+      /* ^ If your filename is different, change it here */
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Player overlays sitting on top of your printed zones */
+
+    .player-overlay {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.72rem;
+      color: #f9fafb;
+    }
+
+    .player-overlay.top {
+      top: 7%;
+    }
+
+    .player-overlay.bottom {
+      bottom: 7%;
     }
 
     .player-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      text-shadow: 0 0 8px rgba(0, 0, 0, 0.75);
     }
 
     .player-name {
       font-weight: 600;
       font-size: 0.9rem;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
 
     .badge-active {
-      font-size: 0.7rem;
-      padding: 2px 8px;
+      font-size: 0.65rem;
+      padding: 2px 7px;
       border-radius: 999px;
-      border: 1px solid #fbbf24;
-      color: #fef3c7;
-      background: radial-gradient(circle at top left, #f59e0b, #92400e);
-      text-transform: uppercase;
+      border: 1px solid var(--gold-soft);
+      background: radial-gradient(circle at top left, #facc15, #92400e);
+      color: #111827;
       letter-spacing: 0.12em;
-    }
-
-    .stats {
-      display: flex;
-      gap: 10px;
-      font-size: 0.78rem;
-      flex-wrap: wrap;
-    }
-
-    .stat-pill {
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.45);
-    }
-
-    .zones-row {
-      display: grid;
-      grid-template-columns: 1.3fr 1.7fr 1.1fr;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .zone {
-      border-radius: 14px;
-      padding: 6px;
-      background: radial-gradient(circle at top left, #020617, #020617);
-      border: 1px dashed rgba(148, 163, 184, 0.5);
-      min-height: 52px;
-    }
-
-    .zone-title {
-      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
-      margin-bottom: 3px;
     }
 
-    .cards-row {
+    .overlay-stats {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
     }
 
-    .card-pill {
-      font-size: 0.72rem;
-      padding: 3px 7px;
+    .stat-pill {
+      padding: 2px 7px;
       border-radius: 999px;
-      background: rgba(17, 24, 39, 0.96);
-      border: 1px solid rgba(96, 165, 250, 0.6);
-      cursor: default;
-      white-space: nowrap;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.6);
     }
 
-    .card-pill.tapped {
-      opacity: 0.5;
-      text-decoration: line-through;
+    .overlay-zones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .zone-pill {
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      font-size: 0.7rem;
+      max-width: 40%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Active player hand, sits under the board (Your Hand Below Edge) */
+
+    .hand-wrapper {
+      margin: 8px auto 10px;
+      max-width: 980px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.96), #020617);
+      box-shadow: 0 18px 32px rgba(15, 23, 42, 0.8);
+    }
+
+    .hand-title {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    .hand-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
     }
 
     .card-button {
-      font-size: 0.74rem;
-      padding: 3px 9px;
+      font-size: 0.72rem;
+      padding: 4px 9px;
       border-radius: 999px;
-      border: 1px solid rgba(96, 165, 250, 0.8);
+      border: 1px solid rgba(96, 165, 250, 0.9);
       background: radial-gradient(circle at top left, #0f172a, #020617);
+      color: #e5e7eb;
       cursor: pointer;
+      white-space: nowrap;
     }
 
+    .card-button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      border-color: #4b5563;
+      background: #020617;
+    }
+
+    /* Combat log */
+
     .log {
-      margin-top: 12px;
+      margin-top: 10px;
       padding: 8px 10px;
       border-radius: 12px;
       border: 1px solid rgba(148, 163, 184, 0.5);
       background: radial-gradient(circle at top left, #020617, #020617);
       font-size: 0.78rem;
-      max-height: 170px;
+      max-height: 180px;
       overflow-y: auto;
       line-height: 1.3;
     }
 
     .log-title {
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
       letter-spacing: 0.15em;
       color: #9ca3af;
@@ -183,21 +250,30 @@
       color: #e5e7eb;
     }
 
-    .turn-indicator {
-      text-align: center;
-      font-size: 0.75rem;
-      color: #9ca3af;
-      margin-bottom: 6px;
+    @media (max-width: 640px) {
+      .player-overlay {
+        font-size: 0.68rem;
+      }
+
+      .stat-pill,
+      .zone-pill {
+        font-size: 0.68rem;
+      }
+
+      .card-button {
+        font-size: 0.68rem;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Essence Crown – Board Demo</h1>
+  <h1>Essence Crown: Shard Wars</h1>
   <div id="app"></div>
 
   <script>
     // ------------------------
-    // Simple data structures
+    // Lightweight board model
+    // (keeps browser demo separate from TS engine)
     // ------------------------
 
     function createDeity(ownerId, startingEssence, baseKl) {
@@ -237,15 +313,13 @@
 
     function createVeiledDeck(ownerId) {
       const deck = [];
-      // 3 shards
       for (let i = 0; i < 3; i++) {
         deck.push(createShard(ownerId, i, 1));
       }
-      // 3 avatars with different stats
       deck.push(createAvatar(ownerId, 0, 2, 2, 2));
       deck.push(createAvatar(ownerId, 1, 3, 2, 3));
       deck.push(createAvatar(ownerId, 2, 4, 3, 4));
-      // simple shuffle
+      // shuffle
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -257,7 +331,7 @@
       const deity = createDeity(id, startingEssence, baseKl);
       return {
         id,
-        name: "Player " + (id === "P1" ? "One" : "Two"),
+        name: id === "P1" ? "Player One" : "Player Two",
         deity,
         essence: deity.essence,
         baseKl: deity.baseKl,
@@ -295,11 +369,10 @@
       const stamp = "[T" + game.turnNumber + "]";
       game.log.push(stamp + " " + text);
       if (game.log.length > 80) game.log.shift();
-      render();
     }
 
     // ------------------------
-    // Core turn + actions
+    // Turn + actions
     // ------------------------
 
     function drawCard(player) {
@@ -344,7 +417,16 @@
       recalcKl(p);
       checkGodCharge(p);
 
-      logLine(p.name + " begins their turn. Essence: " + p.essence + ", KL: " + p.currentKl + ", God Charges: " + p.godCharges);
+      logLine(
+        p.name +
+          " begins their turn. Essence: " +
+          p.essence +
+          ", KL: " +
+          p.currentKl +
+          ", God Charges: " +
+          p.godCharges
+      );
+
       if (opp && opp.essence <= 0) {
         logLine(opp.name + " has 0 Essence. Game over.");
       }
@@ -362,7 +444,17 @@
 
       const cost = card.klCost || 0;
       if (p.currentKl < cost) {
-        logLine(p.name + " tried to play " + card.name + " but lacks KL (" + p.currentKl + "/" + cost + ").");
+        logLine(
+          p.name +
+            " tried to play " +
+            card.name +
+            " but lacks KL (" +
+            p.currentKl +
+            "/" +
+            cost +
+            ")."
+        );
+        render();
         return;
       }
 
@@ -380,6 +472,7 @@
         logLine(p.name + " played " + card.name + " (type " + card.type + ")");
       }
 
+      recalcKl(p);
       render();
     }
 
@@ -392,6 +485,7 @@
       const attackers = p.avatarLine.filter(c => !c.tapped && (c.power || 0) > 0);
       if (attackers.length === 0) {
         logLine(p.name + " has no untapped Avatars to attack with.");
+        render();
         return;
       }
 
@@ -402,7 +496,16 @@
       });
 
       opp.essence = Math.max(0, opp.essence - totalDamage);
-      logLine(p.name + " attacks with " + attackers.length + " Avatar(s) for " + totalDamage + " Essence damage to " + opp.name + ".");
+      logLine(
+        p.name +
+          " attacks with " +
+          attackers.length +
+          " Avatar(s) for " +
+          totalDamage +
+          " Essence damage to " +
+          opp.name +
+          "."
+      );
 
       if (opp.essence <= 0) {
         logLine(opp.name + " has been reduced to 0 Essence. Game over.");
@@ -424,20 +527,87 @@
     }
 
     // ------------------------
-    // Rendering
+    // Rendering tied to your 2-player board art
     // ------------------------
+
+    function buildPlayerOverlay(p, index) {
+      const overlay = document.createElement("div");
+      overlay.className = "player-overlay " + (index === 0 ? "bottom" : "top");
+
+      const header = document.createElement("div");
+      header.className = "player-header";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "player-name";
+      nameEl.textContent = p.name + " (" + p.id + ")";
+      header.appendChild(nameEl);
+
+      if (index === game.activeIndex) {
+        const badge = document.createElement("div");
+        badge.className = "badge-active";
+        badge.textContent = "Active";
+        header.appendChild(badge);
+      }
+
+      overlay.appendChild(header);
+
+      const stats = document.createElement("div");
+      stats.className = "overlay-stats";
+
+      function makeStat(text) {
+        const pill = document.createElement("div");
+        pill.className = "stat-pill";
+        pill.textContent = text;
+        return pill;
+      }
+
+      stats.appendChild(makeStat("Essence: " + p.essence));
+      stats.appendChild(makeStat("KL: " + p.currentKl + " / " + p.klCap));
+      stats.appendChild(makeStat("Base KL: " + p.baseKl));
+      stats.appendChild(makeStat("God Charges: " + p.godCharges));
+      stats.appendChild(makeStat("Hand: " + p.hand.length));
+      stats.appendChild(makeStat("Deck: " + p.veiledDeck.length));
+
+      overlay.appendChild(stats);
+
+      const zones = document.createElement("div");
+      zones.className = "overlay-zones";
+
+      const shards = document.createElement("div");
+      shards.className = "zone-pill";
+      shards.textContent =
+        "Relics / Shards: " + (p.shardRow.length || 0);
+      zones.appendChild(shards);
+
+      const avatars = document.createElement("div");
+      avatars.className = "zone-pill";
+      avatars.textContent =
+        "Avatars in Field: " + (p.avatarLine.length || 0);
+      zones.appendChild(avatars);
+
+      const crypt = document.createElement("div");
+      crypt.className = "zone-pill";
+      crypt.textContent = "Crypt: " + (p.crypt.length || 0);
+      zones.appendChild(crypt);
+
+      overlay.appendChild(zones);
+
+      return overlay;
+    }
 
     function render() {
       const app = document.getElementById("app");
       app.innerHTML = "";
 
+      // Controls
       const controls = document.createElement("div");
       controls.className = "controls";
 
-      const btnStartTurn = document.createElement("button");
-      btnStartTurn.textContent = game.activeIndex === -1 ? "Start Game (P1 Turn 1)" : "Next Turn";
-      btnStartTurn.onclick = startNextTurn;
-      controls.appendChild(btnStartTurn);
+      const btnTurn = document.createElement("button");
+      btnTurn.textContent =
+        game.activeIndex === -1 ? "Start Game (P1 Turn 1)" : "Next Turn";
+      btnTurn.onclick = startNextTurn;
+      controls.appendChild(btnTurn);
 
       const btnAttack = document.createElement("button");
       btnAttack.textContent = "Attack With All Avatars";
@@ -458,142 +628,76 @@
         turnIndicator.textContent = "Turn: (not started)";
       } else {
         const p = activePlayer();
-        turnIndicator.textContent = "Turn " + game.turnNumber + " – Active: " + (p ? p.name : "?");
+        turnIndicator.textContent =
+          "Turn " +
+          game.turnNumber +
+          " – Active: " +
+          (p ? p.name : "?");
       }
       app.appendChild(turnIndicator);
 
-      const board = document.createElement("div");
-      board.className = "board";
+      // Board with your 2-player art
+      const boardWrapper = document.createElement("div");
+      boardWrapper.className = "board-wrapper";
+
+      const boardImage = document.createElement("div");
+      boardImage.className = "board-image";
 
       game.players.forEach((p, index) => {
-        const row = document.createElement("div");
-        row.className = "player-row";
+        const overlay = buildPlayerOverlay(p, index);
+        boardImage.appendChild(overlay);
+      });
 
-        const header = document.createElement("div");
-        header.className = "player-header";
+      boardWrapper.appendChild(boardImage);
+      app.appendChild(boardWrapper);
 
-        const nameEl = document.createElement("div");
-        nameEl.className = "player-name";
-        nameEl.textContent = p.name + " (" + p.id + ")";
-        header.appendChild(nameEl);
+      // Active player's hand (below the board, matches "hand off-mat" line)
+      const pActive = activePlayer();
+      const handWrap = document.createElement("div");
+      handWrap.className = "hand-wrapper";
 
-        if (index === game.activeIndex) {
-          const badge = document.createElement("div");
-          badge.className = "badge-active";
-          badge.textContent = "Active";
-          header.appendChild(badge);
-        }
+      const handTitle = document.createElement("div");
+      handTitle.className = "hand-title";
+      handTitle.textContent = pActive
+        ? "Active Hand – " + pActive.name + " (" + pActive.id + ")"
+        : "Active Hand – (start the game to draw cards)";
+      handWrap.appendChild(handTitle);
 
-        const stats = document.createElement("div");
-        stats.className = "stats";
+      const handRow = document.createElement("div");
+      handRow.className = "hand-cards";
 
-        function makeStat(text) {
-          const s = document.createElement("div");
-          s.className = "stat-pill";
-          s.textContent = text;
-          return s;
-        }
-
-        stats.appendChild(makeStat("Essence: " + p.essence));
-        stats.appendChild(makeStat("KL: " + p.currentKl + " / cap " + p.klCap));
-        stats.appendChild(makeStat("Base KL: " + p.baseKl));
-        stats.appendChild(makeStat("God Charges: " + p.godCharges));
-        stats.appendChild(makeStat("Hand: " + p.hand.length));
-        stats.appendChild(makeStat("Deck: " + p.veiledDeck.length));
-
-        row.appendChild(header);
-        row.appendChild(stats);
-
-        const zonesRow = document.createElement("div");
-        zonesRow.className = "zones-row";
-
-        const handZone = document.createElement("div");
-        handZone.className = "zone";
-        const handTitle = document.createElement("div");
-        handTitle.className = "zone-title";
-        handTitle.textContent = "Hand";
-        handZone.appendChild(handTitle);
-
-        const handCards = document.createElement("div");
-        handCards.className = "cards-row";
-
-        p.hand.forEach(card => {
-          const isActive = index === game.activeIndex;
-          const canAfford = p.currentKl >= (card.klCost || 0);
-
+      if (pActive) {
+        pActive.hand.forEach(card => {
           const btn = document.createElement("button");
           btn.className = "card-button";
-          btn.textContent = card.name + " [" + card.type + " | KL " + (card.klCost || 0) + "]";
-          btn.disabled = !(isActive && canAfford);
+          btn.textContent =
+            card.name +
+            " [" +
+            card.type +
+            " | KL " +
+            (card.klCost || 0) +
+            "]";
+          const canAfford = pActive.currentKl >= (card.klCost || 0);
+          btn.disabled = !canAfford;
           btn.onclick = function () {
             playCardFromHand(card.id);
           };
-          handCards.appendChild(btn);
+          handRow.appendChild(btn);
         });
 
-        handZone.appendChild(handCards);
-        zonesRow.appendChild(handZone);
+        if (pActive.hand.length === 0) {
+          const empty = document.createElement("div");
+          empty.style.fontSize = "0.72rem";
+          empty.style.color = "#9ca3af";
+          empty.textContent = "No cards in hand yet (draw happens at the start of your turn).";
+          handRow.appendChild(empty);
+        }
+      }
 
-        const fieldZone = document.createElement("div");
-        fieldZone.className = "zone";
-        const fieldTitle = document.createElement("div");
-        fieldTitle.className = "zone-title";
-        fieldTitle.textContent = "Battlefield (Shards + Avatars)";
-        fieldZone.appendChild(fieldTitle);
+      handWrap.appendChild(handRow);
+      app.appendChild(handWrap);
 
-        const fieldCards = document.createElement("div");
-        fieldCards.className = "cards-row";
-
-        p.shardRow.forEach(card => {
-          const pill = document.createElement("div");
-          pill.className = "card-pill";
-          pill.textContent = card.name + " [Shard]";
-          fieldCards.appendChild(pill);
-        });
-
-        p.avatarLine.forEach(card => {
-          const pill = document.createElement("div");
-          pill.className = "card-pill" + (card.tapped ? " tapped" : "");
-          pill.textContent =
-            card.name +
-            " [Avatar " +
-            (card.power || 0) +
-            "/" +
-            (card.guard || 0) +
-            (card.tapped ? " – tapped" : "") +
-            "]";
-          fieldCards.appendChild(pill);
-        });
-
-        fieldZone.appendChild(fieldCards);
-        zonesRow.appendChild(fieldZone);
-
-        const cryptZone = document.createElement("div");
-        cryptZone.className = "zone";
-        const cryptTitle = document.createElement("div");
-        cryptTitle.className = "zone-title";
-        cryptTitle.textContent = "Crypt (Discard)";
-        cryptZone.appendChild(cryptTitle);
-
-        const cryptCards = document.createElement("div");
-        cryptCards.className = "cards-row";
-
-        p.crypt.forEach(card => {
-          const pill = document.createElement("div");
-          pill.className = "card-pill";
-          pill.textContent = card.name + " [" + card.type + "]";
-          cryptCards.appendChild(pill);
-        });
-
-        cryptZone.appendChild(cryptCards);
-        zonesRow.appendChild(cryptZone);
-
-        row.appendChild(zonesRow);
-        board.appendChild(row);
-      });
-
-      app.appendChild(board);
-
+      // Log
       const logBox = document.createElement("div");
       logBox.className = "log";
 
@@ -612,6 +716,7 @@
       app.appendChild(logBox);
     }
 
+    // Initial state
     logLine("New game started.");
     render();
   </script>
