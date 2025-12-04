@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Essence Crown – Board Demo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #05040a;
+      color: #f5f3ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 12px 0 4px;
+      font-size: 1.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #f5e3ff;
+    }
+
+    #app {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      padding: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid #a855f7;
+      background: radial-gradient(circle at top left, #7c3aed, #4c1d95);
+      color: #fdfcff;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      background: #1f172a;
+      border-color: #4b5563;
+    }
+
+    .board {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 10px;
+    }
+
+    .player-row {
+      border-radius: 16px;
+      padding: 8px 10px;
+      background: linear-gradient(to bottom right, #111827, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 18px 30px rgba(15, 23, 42, 0.8);
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .player-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .badge-active {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #fbbf24;
+      color: #fef3c7;
+      background: radial-gradient(circle at top left, #f59e0b, #92400e);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      font-size: 0.78rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .zones-row {
+      display: grid;
+      grid-template-columns: 1.3fr 1.7fr 1.1fr;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .zone {
+      border-radius: 14px;
+      padding: 6px;
+      background: radial-gradient(circle at top left, #020617, #020617);
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      min-height: 52px;
+    }
+
+    .zone-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 3px;
+    }
+
+    .cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .card-pill {
+      font-size: 0.72rem;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.96);
+      border: 1px solid rgba(96, 165, 250, 0.6);
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .card-pill.tapped {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .card-button {
+      font-size: 0.74rem;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(96, 165, 250, 0.8);
+      background: radial-gradient(circle at top left, #0f172a, #020617);
+      cursor: pointer;
+    }
+
+    .log {
+      margin-top: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at top left, #020617, #020617);
+      font-size: 0.78rem;
+      max-height: 170px;
+      overflow-y: auto;
+      line-height: 1.3;
+    }
+
+    .log-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    .log-line {
+      color: #e5e7eb;
+    }
+
+    .turn-indicator {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Essence Crown – Board Demo</h1>
+  <div id="app"></div>
+
+  <script>
+    // ------------------------
+    // Simple data structures
+    // ------------------------
+
+    function createDeity(ownerId, startingEssence, baseKl) {
+      return {
+        id: "DEITY-" + ownerId,
+        name: "Deity of " + ownerId,
+        essence: startingEssence,
+        baseKl: baseKl
+      };
+    }
+
+    function createShard(ownerId, index, klCost) {
+      return {
+        id: "SHARD-" + ownerId + "-" + index,
+        ownerId,
+        name: "Shard " + index,
+        type: "Shard",
+        klCost: klCost,
+        power: 0,
+        guard: 0,
+        tapped: false
+      };
+    }
+
+    function createAvatar(ownerId, index, power, guard, klCost) {
+      return {
+        id: "AVATAR-" + ownerId + "-" + index,
+        ownerId,
+        name: "Avatar " + index,
+        type: "Avatar",
+        klCost,
+        power,
+        guard,
+        tapped: false
+      };
+    }
+
+    function createVeiledDeck(ownerId) {
+      const deck = [];
+      // 3 shards
+      for (let i = 0; i < 3; i++) {
+        deck.push(createShard(ownerId, i, 1));
+      }
+      // 3 avatars with different stats
+      deck.push(createAvatar(ownerId, 0, 2, 2, 2));
+      deck.push(createAvatar(ownerId, 1, 3, 2, 3));
+      deck.push(createAvatar(ownerId, 2, 4, 3, 4));
+      // simple shuffle
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    function createPlayer(id, startingEssence, baseKl) {
+      const deity = createDeity(id, startingEssence, baseKl);
+      return {
+        id,
+        name: "Player " + (id === "P1" ? "One" : "Two"),
+        deity,
+        essence: deity.essence,
+        baseKl: deity.baseKl,
+        currentKl: deity.baseKl,
+        godCharges: 0,
+        veiledDeck: createVeiledDeck(id),
+        hand: [],
+        shardRow: [],
+        avatarLine: [],
+        crypt: [],
+        nullZone: [],
+        klCap: 31
+      };
+    }
+
+    const game = {
+      players: [
+        createPlayer("P1", 23, 3),
+        createPlayer("P2", 21, 3)
+      ],
+      activeIndex: -1,
+      turnNumber: 0,
+      log: []
+    };
+
+    function activePlayer() {
+      return game.activeIndex === -1 ? null : game.players[game.activeIndex];
+    }
+
+    function opponentOf(player) {
+      return game.players.find(p => p.id !== player.id);
+    }
+
+    function logLine(text) {
+      const stamp = "[T" + game.turnNumber + "]";
+      game.log.push(stamp + " " + text);
+      if (game.log.length > 80) game.log.shift();
+      render();
+    }
+
+    // ------------------------
+    // Core turn + actions
+    // ------------------------
+
+    function drawCard(player) {
+      if (player.veiledDeck.length === 0) return;
+      const card = player.veiledDeck.shift();
+      player.hand.push(card);
+    }
+
+    function recalcKl(player) {
+      const shardBonus = player.shardRow.length;
+      const base = player.baseKl + shardBonus;
+      player.currentKl = Math.min(base, player.klCap);
+    }
+
+    function checkGodCharge(player) {
+      if (player.currentKl >= 13 && player.godCharges < 3) {
+        player.godCharges += 1;
+        logLine(player.name + " reached KL 13+ and gained a God Charge (" + player.godCharges + ")");
+      }
+    }
+
+    function readyBoard(player) {
+      player.avatarLine.forEach(card => {
+        card.tapped = false;
+      });
+    }
+
+    function startNextTurn() {
+      if (game.activeIndex === -1) {
+        game.activeIndex = 0;
+        game.turnNumber = 1;
+      } else {
+        game.activeIndex = (game.activeIndex + 1) % game.players.length;
+        game.turnNumber += 1;
+      }
+
+      const p = activePlayer();
+      const opp = opponentOf(p);
+
+      readyBoard(p);
+      drawCard(p);
+      recalcKl(p);
+      checkGodCharge(p);
+
+      logLine(p.name + " begins their turn. Essence: " + p.essence + ", KL: " + p.currentKl + ", God Charges: " + p.godCharges);
+      if (opp && opp.essence <= 0) {
+        logLine(opp.name + " has 0 Essence. Game over.");
+      }
+
+      render();
+    }
+
+    function playCardFromHand(cardId) {
+      const p = activePlayer();
+      if (!p) return;
+
+      const idx = p.hand.findIndex(c => c.id === cardId);
+      if (idx === -1) return;
+      const card = p.hand[idx];
+
+      const cost = card.klCost || 0;
+      if (p.currentKl < cost) {
+        logLine(p.name + " tried to play " + card.name + " but lacks KL (" + p.currentKl + "/" + cost + ").");
+        return;
+      }
+
+      p.currentKl -= cost;
+      p.hand.splice(idx, 1);
+
+      if (card.type === "Shard") {
+        p.shardRow.push(card);
+        logLine(p.name + " played Shard: " + card.name + " (KL -" + cost + ")");
+      } else if (card.type === "Avatar") {
+        card.tapped = false;
+        p.avatarLine.push(card);
+        logLine(p.name + " played Avatar: " + card.name + " (KL -" + cost + ")");
+      } else {
+        logLine(p.name + " played " + card.name + " (type " + card.type + ")");
+      }
+
+      render();
+    }
+
+    function attackWithAll() {
+      const p = activePlayer();
+      if (!p) return;
+      const opp = opponentOf(p);
+      if (!opp) return;
+
+      const attackers = p.avatarLine.filter(c => !c.tapped && (c.power || 0) > 0);
+      if (attackers.length === 0) {
+        logLine(p.name + " has no untapped Avatars to attack with.");
+        return;
+      }
+
+      let totalDamage = 0;
+      attackers.forEach(c => {
+        totalDamage += c.power || 0;
+        c.tapped = true;
+      });
+
+      opp.essence = Math.max(0, opp.essence - totalDamage);
+      logLine(p.name + " attacks with " + attackers.length + " Avatar(s) for " + totalDamage + " Essence damage to " + opp.name + ".");
+
+      if (opp.essence <= 0) {
+        logLine(opp.name + " has been reduced to 0 Essence. Game over.");
+      }
+
+      render();
+    }
+
+    function resetGame() {
+      game.players = [
+        createPlayer("P1", 23, 3),
+        createPlayer("P2", 21, 3)
+      ];
+      game.activeIndex = -1;
+      game.turnNumber = 0;
+      game.log = [];
+      logLine("New game started.");
+      render();
+    }
+
+    // ------------------------
+    // Rendering
+    // ------------------------
+
+    function render() {
+      const app = document.getElementById("app");
+      app.innerHTML = "";
+
+      const controls = document.createElement("div");
+      controls.className = "controls";
+
+      const btnStartTurn = document.createElement("button");
+      btnStartTurn.textContent = game.activeIndex === -1 ? "Start Game (P1 Turn 1)" : "Next Turn";
+      btnStartTurn.onclick = startNextTurn;
+      controls.appendChild(btnStartTurn);
+
+      const btnAttack = document.createElement("button");
+      btnAttack.textContent = "Attack With All Avatars";
+      btnAttack.onclick = attackWithAll;
+      btnAttack.disabled = activePlayer() === null;
+      controls.appendChild(btnAttack);
+
+      const btnReset = document.createElement("button");
+      btnReset.textContent = "Reset Game";
+      btnReset.onclick = resetGame;
+      controls.appendChild(btnReset);
+
+      app.appendChild(controls);
+
+      const turnIndicator = document.createElement("div");
+      turnIndicator.className = "turn-indicator";
+      if (game.turnNumber === 0) {
+        turnIndicator.textContent = "Turn: (not started)";
+      } else {
+        const p = activePlayer();
+        turnIndicator.textContent = "Turn " + game.turnNumber + " – Active: " + (p ? p.name : "?");
+      }
+      app.appendChild(turnIndicator);
+
+      const board = document.createElement("div");
+      board.className = "board";
+
+      game.players.forEach((p, index) => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+
+        const header = document.createElement("div");
+        header.className = "player-header";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "player-name";
+        nameEl.textContent = p.name + " (" + p.id + ")";
+        header.appendChild(nameEl);
+
+        if (index === game.activeIndex) {
+          const badge = document.createElement("div");
+          badge.className = "badge-active";
+          badge.textContent = "Active";
+          header.appendChild(badge);
+        }
+
+        const stats = document.createElement("div");
+        stats.className = "stats";
+
+        function makeStat(text) {
+          const s = document.createElement("div");
+          s.className = "stat-pill";
+          s.textContent = text;
+          return s;
+        }
+
+        stats.appendChild(makeStat("Essence: " + p.essence));
+        stats.appendChild(makeStat("KL: " + p.currentKl + " / cap " + p.klCap));
+        stats.appendChild(makeStat("Base KL: " + p.baseKl));
+        stats.appendChild(makeStat("God Charges: " + p.godCharges));
+        stats.appendChild(makeStat("Hand: " + p.hand.length));
+        stats.appendChild(makeStat("Deck: " + p.veiledDeck.length));
+
+        row.appendChild(header);
+        row.appendChild(stats);
+
+        const zonesRow = document.createElement("div");
+        zonesRow.className = "zones-row";
+
+        const handZone = document.createElement("div");
+        handZone.className = "zone";
+        const handTitle = document.createElement("div");
+        handTitle.className = "zone-title";
+        handTitle.textContent = "Hand";
+        handZone.appendChild(handTitle);
+
+        const handCards = document.createElement("div");
+        handCards.className = "cards-row";
+
+        p.hand.forEach(card => {
+          const isActive = index === game.activeIndex;
+          const canAfford = p.currentKl >= (card.klCost || 0);
+
+          const btn = document.createElement("button");
+          btn.className = "card-button";
+          btn.textContent = card.name + " [" + card.type + " | KL " + (card.klCost || 0) + "]";
+          btn.disabled = !(isActive && canAfford);
+          btn.onclick = function () {
+            playCardFromHand(card.id);
+          };
+          handCards.appendChild(btn);
+        });
+
+        handZone.appendChild(handCards);
+        zonesRow.appendChild(handZone);
+
+        const fieldZone = document.createElement("div");
+        fieldZone.className = "zone";
+        const fieldTitle = document.createElement("div");
+        fieldTitle.className = "zone-title";
+        fieldTitle.textContent = "Battlefield (Shards + Avatars)";
+        fieldZone.appendChild(fieldTitle);
+
+        const fieldCards = document.createElement("div");
+        fieldCards.className = "cards-row";
+
+        p.shardRow.forEach(card => {
+          const pill = document.createElement("div");
+          pill.className = "card-pill";
+          pill.textContent = card.name + " [Shard]";
+          fieldCards.appendChild(pill);
+        });
+
+        p.avatarLine.forEach(card => {
+          const pill = document.createElement("div");
+          pill.className = "card-pill" + (card.tapped ? " tapped" : "");
+          pill.textContent =
+            card.name +
+            " [Avatar " +
+            (card.power || 0) +
+            "/" +
+            (card.guard || 0) +
+            (card.tapped ? " – tapped" : "") +
+            "]";
+          fieldCards.appendChild(pill);
+        });
+
+        fieldZone.appendChild(fieldCards);
+        zonesRow.appendChild(fieldZone);
+
+        const cryptZone = document.createElement("div");
+        cryptZone.className = "zone";
+        const cryptTitle = document.createElement("div");
+        cryptTitle.className = "zone-title";
+        cryptTitle.textContent = "Crypt (Discard)";
+        cryptZone.appendChild(cryptTitle);
+
+        const cryptCards = document.createElement("div");
+        cryptCards.className = "cards-row";
+
+        p.crypt.forEach(card => {
+          const pill = document.createElement("div");
+          pill.className = "card-pill";
+          pill.textContent = card.name + " [" + card.type + "]";
+          cryptCards.appendChild(pill);
+        });
+
+        cryptZone.appendChild(cryptCards);
+        zonesRow.appendChild(cryptZone);
+
+        row.appendChild(zonesRow);
+        board.appendChild(row);
+      });
+
+      app.appendChild(board);
+
+      const logBox = document.createElement("div");
+      logBox.className = "log";
+
+      const logTitle = document.createElement("div");
+      logTitle.className = "log-title";
+      logTitle.textContent = "Combat Log";
+      logBox.appendChild(logTitle);
+
+      game.log.forEach(line => {
+        const div = document.createElement("div");
+        div.className = "log-line";
+        div.textContent = line;
+        logBox.appendChild(div);
+      });
+
+      app.appendChild(logBox);
+    }
+
+    logLine("New game started.");
+    render();
+  </script>
+</body>
+</html>
