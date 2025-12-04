@@ -92,8 +92,7 @@
       max-width: 980px;
       /* 24x28in ≈ 24:28 ratio */
       aspect-ratio: 24 / 28;
-      background-image: url("EssenceCrown_2Player_Tabletop_v3_24x28in_300dpi.png");
-      /* ^ If your filename is different, change it here */
+      background-image: url("https://github.com/skyesoverlondon-alt/essence-crown-engine/raw/2d1bdee653429ff5f087074091a1f7881fd445ff/docs/EssenceCrown_2Player_Tabletop_v3_24x28in_300dpi.png");
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
@@ -102,7 +101,7 @@
       box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
     }
 
-    /* Player overlays sitting on top of your printed zones */
+    /* Player overlays on top of printed zones */
 
     .player-overlay {
       position: absolute;
@@ -113,6 +112,7 @@
       gap: 4px;
       font-size: 0.72rem;
       color: #f9fafb;
+      pointer-events: none; /* overlays are informational only */
     }
 
     .player-overlay.top {
@@ -180,7 +180,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Active player hand, sits under the board (Your Hand Below Edge) */
+    /* Active player hand, just below the board */
 
     .hand-wrapper {
       margin: 8px auto 10px;
@@ -273,7 +273,6 @@
   <script>
     // ------------------------
     // Lightweight board model
-    // (keeps browser demo separate from TS engine)
     // ------------------------
 
     function createDeity(ownerId, startingEssence, baseKl) {
@@ -288,7 +287,7 @@
     function createShard(ownerId, index, klCost) {
       return {
         id: "SHARD-" + ownerId + "-" + index,
-        ownerId,
+        ownerId: ownerId,
         name: "Shard " + index,
         type: "Shard",
         klCost: klCost,
@@ -301,38 +300,40 @@
     function createAvatar(ownerId, index, power, guard, klCost) {
       return {
         id: "AVATAR-" + ownerId + "-" + index,
-        ownerId,
+        ownerId: ownerId,
         name: "Avatar " + index,
         type: "Avatar",
-        klCost,
-        power,
-        guard,
+        klCost: klCost,
+        power: power,
+        guard: guard,
         tapped: false
       };
     }
 
     function createVeiledDeck(ownerId) {
-      const deck = [];
-      for (let i = 0; i < 3; i++) {
+      var deck = [];
+      var i;
+      for (i = 0; i < 3; i++) {
         deck.push(createShard(ownerId, i, 1));
       }
       deck.push(createAvatar(ownerId, 0, 2, 2, 2));
       deck.push(createAvatar(ownerId, 1, 3, 2, 3));
       deck.push(createAvatar(ownerId, 2, 4, 3, 4));
-      // shuffle
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
+      for (i = deck.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = deck[i];
+        deck[i] = deck[j];
+        deck[j] = tmp;
       }
       return deck;
     }
 
     function createPlayer(id, startingEssence, baseKl) {
-      const deity = createDeity(id, startingEssence, baseKl);
+      var deity = createDeity(id, startingEssence, baseKl);
       return {
-        id,
+        id: id,
         name: id === "P1" ? "Player One" : "Player Two",
-        deity,
+        deity: deity,
         essence: deity.essence,
         baseKl: deity.baseKl,
         currentKl: deity.baseKl,
@@ -347,7 +348,7 @@
       };
     }
 
-    const game = {
+    var game = {
       players: [
         createPlayer("P1", 23, 3),
         createPlayer("P2", 21, 3)
@@ -362,11 +363,15 @@
     }
 
     function opponentOf(player) {
-      return game.players.find(p => p.id !== player.id);
+      var i;
+      for (i = 0; i < game.players.length; i++) {
+        if (game.players[i].id !== player.id) return game.players[i];
+      }
+      return null;
     }
 
     function logLine(text) {
-      const stamp = "[T" + game.turnNumber + "]";
+      var stamp = "[T" + game.turnNumber + "]";
       game.log.push(stamp + " " + text);
       if (game.log.length > 80) game.log.shift();
     }
@@ -377,27 +382,34 @@
 
     function drawCard(player) {
       if (player.veiledDeck.length === 0) return;
-      const card = player.veiledDeck.shift();
+      var card = player.veiledDeck.shift();
       player.hand.push(card);
     }
 
     function recalcKl(player) {
-      const shardBonus = player.shardRow.length;
-      const base = player.baseKl + shardBonus;
-      player.currentKl = Math.min(base, player.klCap);
+      var shardBonus = player.shardRow.length;
+      var base = player.baseKl + shardBonus;
+      if (base > player.klCap) base = player.klCap;
+      player.currentKl = base;
     }
 
     function checkGodCharge(player) {
       if (player.currentKl >= 13 && player.godCharges < 3) {
         player.godCharges += 1;
-        logLine(player.name + " reached KL 13+ and gained a God Charge (" + player.godCharges + ")");
-      }
+        logLine(
+          player.name +
+            " reached KL 13+ and gained a God Charge (" +
+            player.godCharges +
+            ")"
+        );
+    }
     }
 
     function readyBoard(player) {
-      player.avatarLine.forEach(card => {
-        card.tapped = false;
-      });
+      var i;
+      for (i = 0; i < player.avatarLine.length; i++) {
+        player.avatarLine[i].tapped = false;
+      }
     }
 
     function startNextTurn() {
@@ -409,8 +421,8 @@
         game.turnNumber += 1;
       }
 
-      const p = activePlayer();
-      const opp = opponentOf(p);
+      var p = activePlayer();
+      var opp = opponentOf(p);
 
       readyBoard(p);
       drawCard(p);
@@ -435,14 +447,21 @@
     }
 
     function playCardFromHand(cardId) {
-      const p = activePlayer();
+      var p = activePlayer();
       if (!p) return;
 
-      const idx = p.hand.findIndex(c => c.id === cardId);
+      var idx = -1;
+      var i;
+      for (i = 0; i < p.hand.length; i++) {
+        if (p.hand[i].id === cardId) {
+          idx = i;
+          break;
+        }
+      }
       if (idx === -1) return;
-      const card = p.hand[idx];
+      var card = p.hand[idx];
 
-      const cost = card.klCost || 0;
+      var cost = card.klCost || 0;
       if (p.currentKl < cost) {
         logLine(
           p.name +
@@ -477,23 +496,29 @@
     }
 
     function attackWithAll() {
-      const p = activePlayer();
+      var p = activePlayer();
       if (!p) return;
-      const opp = opponentOf(p);
+      var opp = opponentOf(p);
       if (!opp) return;
 
-      const attackers = p.avatarLine.filter(c => !c.tapped && (c.power || 0) > 0);
+      var attackers = [];
+      var i;
+      for (i = 0; i < p.avatarLine.length; i++) {
+        var c = p.avatarLine[i];
+        if (!c.tapped && (c.power || 0) > 0) attackers.push(c);
+      }
+
       if (attackers.length === 0) {
         logLine(p.name + " has no untapped Avatars to attack with.");
         render();
         return;
       }
 
-      let totalDamage = 0;
-      attackers.forEach(c => {
-        totalDamage += c.power || 0;
-        c.tapped = true;
-      });
+      var totalDamage = 0;
+      for (i = 0; i < attackers.length; i++) {
+        totalDamage += attackers[i].power || 0;
+        attackers[i].tapped = true;
+      }
 
       opp.essence = Math.max(0, opp.essence - totalDamage);
       logLine(
@@ -531,19 +556,19 @@
     // ------------------------
 
     function buildPlayerOverlay(p, index) {
-      const overlay = document.createElement("div");
+      var overlay = document.createElement("div");
       overlay.className = "player-overlay " + (index === 0 ? "bottom" : "top");
 
-      const header = document.createElement("div");
+      var header = document.createElement("div");
       header.className = "player-header";
 
-      const nameEl = document.createElement("div");
+      var nameEl = document.createElement("div");
       nameEl.className = "player-name";
       nameEl.textContent = p.name + " (" + p.id + ")";
       header.appendChild(nameEl);
 
       if (index === game.activeIndex) {
-        const badge = document.createElement("div");
+        var badge = document.createElement("div");
         badge.className = "badge-active";
         badge.textContent = "Active";
         header.appendChild(badge);
@@ -551,11 +576,11 @@
 
       overlay.appendChild(header);
 
-      const stats = document.createElement("div");
+      var stats = document.createElement("div");
       stats.className = "overlay-stats";
 
       function makeStat(text) {
-        const pill = document.createElement("div");
+        var pill = document.createElement("div");
         pill.className = "stat-pill";
         pill.textContent = text;
         return pill;
@@ -570,22 +595,20 @@
 
       overlay.appendChild(stats);
 
-      const zones = document.createElement("div");
+      var zones = document.createElement("div");
       zones.className = "overlay-zones";
 
-      const shards = document.createElement("div");
+      var shards = document.createElement("div");
       shards.className = "zone-pill";
-      shards.textContent =
-        "Relics / Shards: " + (p.shardRow.length || 0);
+      shards.textContent = "Relics / Shards: " + (p.shardRow.length || 0);
       zones.appendChild(shards);
 
-      const avatars = document.createElement("div");
+      var avatars = document.createElement("div");
       avatars.className = "zone-pill";
-      avatars.textContent =
-        "Avatars in Field: " + (p.avatarLine.length || 0);
+      avatars.textContent = "Avatars in Field: " + (p.avatarLine.length || 0);
       zones.appendChild(avatars);
 
-      const crypt = document.createElement("div");
+      var crypt = document.createElement("div");
       crypt.className = "zone-pill";
       crypt.textContent = "Crypt: " + (p.crypt.length || 0);
       zones.appendChild(crypt);
@@ -596,38 +619,38 @@
     }
 
     function render() {
-      const app = document.getElementById("app");
+      var app = document.getElementById("app");
       app.innerHTML = "";
 
       // Controls
-      const controls = document.createElement("div");
+      var controls = document.createElement("div");
       controls.className = "controls";
 
-      const btnTurn = document.createElement("button");
+      var btnTurn = document.createElement("button");
       btnTurn.textContent =
         game.activeIndex === -1 ? "Start Game (P1 Turn 1)" : "Next Turn";
       btnTurn.onclick = startNextTurn;
       controls.appendChild(btnTurn);
 
-      const btnAttack = document.createElement("button");
+      var btnAttack = document.createElement("button");
       btnAttack.textContent = "Attack With All Avatars";
       btnAttack.onclick = attackWithAll;
       btnAttack.disabled = activePlayer() === null;
       controls.appendChild(btnAttack);
 
-      const btnReset = document.createElement("button");
+      var btnReset = document.createElement("button");
       btnReset.textContent = "Reset Game";
       btnReset.onclick = resetGame;
       controls.appendChild(btnReset);
 
       app.appendChild(controls);
 
-      const turnIndicator = document.createElement("div");
+      var turnIndicator = document.createElement("div");
       turnIndicator.className = "turn-indicator";
       if (game.turnNumber === 0) {
         turnIndicator.textContent = "Turn: (not started)";
       } else {
-        const p = activePlayer();
+        var p = activePlayer();
         turnIndicator.textContent =
           "Turn " +
           game.turnNumber +
@@ -637,60 +660,64 @@
       app.appendChild(turnIndicator);
 
       // Board with your 2-player art
-      const boardWrapper = document.createElement("div");
+      var boardWrapper = document.createElement("div");
       boardWrapper.className = "board-wrapper";
 
-      const boardImage = document.createElement("div");
+      var boardImage = document.createElement("div");
       boardImage.className = "board-image";
 
-      game.players.forEach((p, index) => {
-        const overlay = buildPlayerOverlay(p, index);
+      for (var i = 0; i < game.players.length; i++) {
+        var overlay = buildPlayerOverlay(game.players[i], i);
         boardImage.appendChild(overlay);
-      });
+      }
 
       boardWrapper.appendChild(boardImage);
       app.appendChild(boardWrapper);
 
-      // Active player's hand (below the board, matches "hand off-mat" line)
-      const pActive = activePlayer();
-      const handWrap = document.createElement("div");
+      // Active player's hand
+      var pActive = activePlayer();
+      var handWrap = document.createElement("div");
       handWrap.className = "hand-wrapper";
 
-      const handTitle = document.createElement("div");
+      var handTitle = document.createElement("div");
       handTitle.className = "hand-title";
       handTitle.textContent = pActive
         ? "Active Hand – " + pActive.name + " (" + pActive.id + ")"
         : "Active Hand – (start the game to draw cards)";
       handWrap.appendChild(handTitle);
 
-      const handRow = document.createElement("div");
+      var handRow = document.createElement("div");
       handRow.className = "hand-cards";
 
       if (pActive) {
-        pActive.hand.forEach(card => {
-          const btn = document.createElement("button");
-          btn.className = "card-button";
-          btn.textContent =
-            card.name +
-            " [" +
-            card.type +
-            " | KL " +
-            (card.klCost || 0) +
-            "]";
-          const canAfford = pActive.currentKl >= (card.klCost || 0);
-          btn.disabled = !canAfford;
-          btn.onclick = function () {
-            playCardFromHand(card.id);
-          };
-          handRow.appendChild(btn);
-        });
-
         if (pActive.hand.length === 0) {
-          const empty = document.createElement("div");
+          var empty = document.createElement("div");
           empty.style.fontSize = "0.72rem";
           empty.style.color = "#9ca3af";
-          empty.textContent = "No cards in hand yet (draw happens at the start of your turn).";
+          empty.textContent =
+            "No cards in hand yet (draw happens at the start of your turn).";
           handRow.appendChild(empty);
+        } else {
+          for (var j = 0; j < pActive.hand.length; j++) {
+            var card = pActive.hand[j];
+            var btn = document.createElement("button");
+            btn.className = "card-button";
+            btn.textContent =
+              card.name +
+              " [" +
+              card.type +
+              " | KL " +
+              (card.klCost || 0) +
+              "]";
+            var canAfford = pActive.currentKl >= (card.klCost || 0);
+            btn.disabled = !canAfford;
+            (function (id) {
+              btn.onclick = function () {
+                playCardFromHand(id);
+              };
+            })(card.id);
+            handRow.appendChild(btn);
+          }
         }
       }
 
@@ -698,20 +725,20 @@
       app.appendChild(handWrap);
 
       // Log
-      const logBox = document.createElement("div");
+      var logBox = document.createElement("div");
       logBox.className = "log";
 
-      const logTitle = document.createElement("div");
+      var logTitle = document.createElement("div");
       logTitle.className = "log-title";
       logTitle.textContent = "Combat Log";
       logBox.appendChild(logTitle);
 
-      game.log.forEach(line => {
-        const div = document.createElement("div");
+      for (var k = 0; k < game.log.length; k++) {
+        var div = document.createElement("div");
         div.className = "log-line";
-        div.textContent = line;
+        div.textContent = game.log[k];
         logBox.appendChild(div);
-      });
+      }
 
       app.appendChild(logBox);
     }
